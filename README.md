@@ -1281,6 +1281,15 @@
     $($sidebar[0]).find('ul');
     ```
 
+  - Avoid using more than 3 qualifiers in a selector
+    ```javascript
+    // bad
+    $('body .content div.user p#description span.age');
+
+    // good
+    $('div.user p#description span.age');
+    ```
+
     **[[⬆]](#TOC)**
 
 
