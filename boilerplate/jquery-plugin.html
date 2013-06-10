@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Plugin pattern</title>
+</head>
+<body>
+	<!-- Markup de demo -->
+	<div class="foo A"></div>
+	<div class="foo B"></div>
+
+	<!-- Inclusion de jQuery -->
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.js"></script>
+
+	<!-- Pattern du plugin -->
+	<script>
+		// Le point-virgule avant l'invocation de la fonction est un filet de sécurité
+		// si le plugin est concaténé avec d'autre scripts et/ou d'autres plugin qui
+		// pourraient ne pas avoir été convenablement fermés.
+
+		// "undefined" est utilisée ici car sa variable globale est mutable en
+		// ECMAScript 3, c'est-à-dire qu'elle peut être redéfinie par quelqu'un
+		// d'autre. De plus, "undefined" n'est pas réélement passé à la
+		// fonction, ainsi nous sommes certains que sa valeure est bien "undefined"
+		// comme un "void 0". D'autre part en ES5, "undefined" n'est plus mutable.
+
+		// "window" et "document" sont passées par des variables locales plutôt que
+		// par les globales, cela accélère (relativement) le processus de résolution
+		// et permet de mieux tirer avantage de la "minification" (tout
+		// particulièrement quand les deux sont régulièrement référencés dans votre plugin).
+		;(function( $, window, document, undefined ) {
+
+			// Définition du nom du plugin et des paramètres par défaut.
+			var pluginName = 'SomePlugin',
+				defaults = {
+					name: 'bra',
+					surname: 'bru'
+				}
+
+			// Voici le constructeur du plugin
+			function Plugin( element, options ) {
+				this.element = element;
+				this.$element = $( element );
+
+				// jQuery a une méthode "extend" qui fusionne les contenus d'au moins
+				// deux objets, sauvegardant le résultat dans le premier. Le premier
+				// objet est généralement vide, vu que nous ne souhaitons pas altérer
+				// les options par défaut des futures instances du plugin.
+				this.options = $.extend( {}, defaults, options );
+
+				this.render();
+			}
+
+			// Le prototype est un objet qui permet de stocker tout ce qui n'est pas
+			// propre à une instance du plugin. Ainsi, on a un seul objet "Plugin.prototype"
+			// en mémoire, quelque soit le nombre d'instances du plugin.
+			Plugin.prototype = {
+				render: function() {
+					this.$element.html( this.options.name + ' ' + this.options.surname );
+				},
+				update: function( options ) {
+					$.extend( this.options, options );
+
+					this.render();
+				},
+				reset: function() {
+					this.options = defaults;
+
+					this.render();
+				}
+			}
+
+			// Ceci est un décorateur autour du constructeur qui permet de mettre en place 
+			// un certain nombre de notions à respecter dans les plugins Jquery
+
+			// On fait correspondre la clé "pluginName" à notre décorateur de plugin,
+			// dans le namespace de jQuery
+			$.fn[ pluginName ] = function( options ) {
+
+				var 
+					// Ici, "arguments[0]" équivaut à "options" mais nous créons cette variable
+					// pour la lisibilité du code uniquement.
+					method = arguments[0],
+
+					// Nous récupérons les éventuels paramètres suivant le premier
+					// Dans le cas suivant : $( '.foo' ).SomePlugin( 'update', { name: 'tom' } );
+					// args vaudra "{ name: 'tom' }"
+					args = Array.prototype.slice.call( arguments, 1 );
+
+				// Ici on effectue deux opérations :
+				// - "each" permet d'appliquer l'appel au plugin sur tous les éléments contenus
+				//   par le sélecteur jQuery.
+				// - "return" permet de retourner la valeur de retour de "each" qui sera "this"
+				//   et permet donc de rendre notre plugin chainable.
+				return this.each( function( ) {
+					var pluginInstance = $.data( this, pluginName );
+					
+					// Si l'élément n'a pas d'instance du plugin, on va lui en associer une nouvelle :
+					if ( !pluginInstance ) {
+						// - création de l'instance du plugin
+						pluginInstance = new Plugin( this, options );
+
+						// - association de l'instance à l'élément
+						$.data( this, pluginName, pluginInstance );
+					}
+
+					// Si le nom de la méthode correspond à une méthode du plugin,
+					// on l'appel avec les arguments récupérés à l'appel du décorateur.
+					if ( $.isFunction( Plugin.prototype[ method ] ) ) {
+						pluginInstance[ method ].apply( pluginInstance, args );
+					}
+					// Autrement, on affiche un message d'erreur dans la console.
+					else if ( typeof method === 'string' ) {
+						console.log( pluginName + ' does not have any method named ' + method );
+					}
+
+				});
+			};
+
+		}) ( jQuery, window, document );
+	</script>
+
+	<!-- Démo -->
+	<script>
+		$(function() {
+			// Initialisation avec arguments
+			$( '.foo' ).SomePlugin( { name: 'john', surname: 'snow' } );
+
+			// Méthode avec arguments
+			$( '.foo' ).SomePlugin( 'update', { name: 'tom' } );
+
+			// Méthode sans arguments
+			$( '.foo' ).SomePlugin( 'reset' );
+
+			// Méthode non existance
+			$( '.foo' ).SomePlugin( 'fakeMethod' );
+		});
+	</script>
+
+</body>
+</html>

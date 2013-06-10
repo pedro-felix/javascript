@@ -1289,6 +1289,9 @@
     // good
     $('div.user p#description span.age');
     ```
+  - Use jQuery plugin boilerplate available in this repository
+    [jquery plugin boilerplate](boilerplate/jquery-plugin.html)
+
 
     **[[⬆]](#TOC)**
 
